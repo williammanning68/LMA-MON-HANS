@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt pytest
+      - name: Parse sample (if any)
+        run: |
+          source .venv/bin/activate
+          python -m ingest.parser --in data/raw --out data/processed/utterances.jsonl || true
+          if [ -f data/processed/utterances.jsonl ]; then python -m ingest.build_db --jsonl data/processed/utterances.jsonl --db data/processed/hansard.db; fi
+      - name: Tests
+        run: |
+          source .venv/bin/activate
+          pytest -q
